@@ -15,11 +15,12 @@ import (
 )
 
 func main() {
-	input := flag.String("input", "", "输入图片路径")
-	output := flag.String("output", "", "输出目录")
-	sizes := flag.String("sizes", "16,24,32,48,64,128,256,512", "生成的尺寸列表,逗号分隔 (默认 Electron icon 尺寸)")
-	format := flag.String("format", "png", "输出图片格式: png 或 jpg")
-	radius := flag.Float64("radius", 0, "每个角的圆弧半径（像素），0为无圆角")
+
+	input := flag.String("input", "", "输入图片路径（必填），支持 PNG/JPG 等常见格式")
+	output := flag.String("output", "", "输出目录（必填），生成的所有 icon/logo 文件会保存在此目录")
+	sizes := flag.String("sizes", "16,24,32,48,64,128,256,512", "生成的尺寸列表，逗号分隔，默认 16,24,32,48,64,128,256,512，适用于 Electron 等主流平台")
+	format := flag.String("format", "png", "输出图片格式，支持 png 或 jpg，默认 png")
+	radius := flag.Float64("radius", 0, "每个角的圆弧半径（像素），以 256 尺寸为基准，其他尺寸自动等比例缩放。0 为无圆角")
 	flag.Parse()
 
 	if *input == "" || *output == "" {
@@ -104,22 +105,6 @@ func main() {
 		return
 	}
 	fmt.Printf("生成: %s\n", icoPath)
-
-	if flag.NArg() > 0 && (flag.Arg(0) == "help" || flag.Arg(0) == "--help" || flag.Arg(0) == "-h") {
-		fmt.Println("icon_logo - 多尺寸 logo/icon 生成工具")
-		fmt.Println("参数:")
-		fmt.Println("  --input    输入图片路径（必填），支持 PNG/JPG 等常见格式")
-		fmt.Println("  --output   输出目录（必填），生成的所有 icon/logo 文件会保存在此目录")
-		fmt.Println("  --sizes    生成的尺寸列表，逗号分隔，默认 16,24,32,48,64,128,256,512，适用于 Electron 等主流平台")
-		fmt.Println("  --format   输出图片格式，支持 png 或 jpg，默认 png")
-		fmt.Println("  --radius   每个角的圆弧半径（像素），以 256 尺寸为基准，其他尺寸自动等比例缩放。0 为无圆角")
-		fmt.Println("  help       查看命令说明和参数介绍")
-		fmt.Println("示例:")
-		fmt.Println("  icon_logo --input logo.png --output out")
-		fmt.Println("  icon_logo --input logo.png --output out --radius 0")
-		fmt.Println("  icon_logo --input logo.png --output out --sizes 32,64,128 --format jpg")
-		os.Exit(0)
-	}
 }
 
 func parseSize(s string) (int, error) {
