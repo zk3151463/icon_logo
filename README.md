@@ -9,6 +9,16 @@ go get github.com/disintegration/imaging
 go get github.com/Kodeworks/golang-image-ico
 ```
 
+## 一键安装
+
+你可以直接通过 go install 安装（Go 1.17+）：
+
+```sh
+go install github.com/zk3151463/icon_logo@latest
+```
+
+安装后可直接在终端使用 `icon_logo` 命令（需将 $GOPATH/bin 或 $HOME/go/bin 加入 PATH）。
+
 ## 使用方法
 
 ```sh
@@ -26,17 +36,17 @@ go run main.go --input 输入图片路径 --output 输出目录 [--sizes 尺寸�
 ### 示例
 生成所有 Electron 需要的 icon：
 ```sh
-go run main.go --input logo.png --output out
+icon_logo --input logo.png --output out
 ```
 
 生成无圆角的 icon：
 ```sh
-go run main.go --input logo.png --output out --radius 0
+icon_logo --input logo.png --output out --radius 0
 ```
 
 自定义尺寸和格式：
 ```sh
-go run main.go --input logo.png --output out --sizes 32,64,128 --format jpg
+icon_logo --input logo.png --output out --sizes 32,64,128 --format jpg
 ```
 
 ## 打包为各平台可执行文件
@@ -52,3 +62,5 @@ task build:all
 ---
 
 如需更多功能或定制，欢迎反馈！
+
+GitHub 项目地址：[https://github.com/zk3151463/icon_logo](https://github.com/zk3151463/icon_logo)
