@@ -50,10 +50,16 @@ func main() {
 		}
 		resized := imaging.Resize(img, size, size, imaging.Lanczos)
 		var rounded image.Image
+		var actualRadius float64
 		if *radius <= 0 {
+			actualRadius = 0
+		} else {
+			actualRadius = *radius * float64(size) / 256.0
+		}
+		if actualRadius <= 0 {
 			rounded = resized // 无圆角
 		} else {
-			rounded = roundCorner(resized, size, *radius)
+			rounded = roundCorner(resized, size, actualRadius)
 		}
 		filename := fmt.Sprintf("logo_%dx%d.%s", size, size, *format)
 		outPath := filepath.Join(*output, filename)
