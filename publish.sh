@@ -3,6 +3,8 @@ set -e
 
 APP_NAME="icon_logo"
 VERSION="$1"
+GENERATE_ONLY="$2"  # 可选，值为 generate-only 时只生成 formula
+
 BUILD_DIR="build"
 FORMULA_FILE="${APP_NAME}.rb"
 REPO_URL="https://github.com/zk3151463/icon_logo"
@@ -19,45 +21,54 @@ PLATFORMS=(
 )
 
 if [ -z "$VERSION" ]; then
-  echo "❌ 用法: $0 <version>，例如: ./publish.sh 1.2.3"
+  echo "❌ Usage: $0 <version> [generate-only]"
   exit 1
 fi
 
-# 创建 git tag（若不存在）
-if ! git rev-parse "v$VERSION" >/dev/null 2>&1; then
-  echo "🏷️ 创建 git tag v$VERSION 并推送"
-  git tag "v$VERSION"
-  git push origin "v$VERSION"
-else
-  echo "✅ Git tag v$VERSION 已存在"
-fi
+echo "🏷️ Version: $VERSION"
+echo "📝 Mode: ${GENERATE_ONLY:-full publish}"
 
 # 清理旧文件
 rm -rf "$BUILD_DIR" *.tar.gz "$FORMULA_FILE"
 mkdir -p "$BUILD_DIR"
 
-# 多平台构建
-echo "🛠️ 构建多个平台版本..."
-for platform in "${PLATFORMS[@]}"; do
-  os=$(echo $platform | awk '{print $1}')
-  arch=$(echo $platform | awk '{print $2}')
-  output_dir="${BUILD_DIR}/${APP_NAME}-${VERSION}-${os}-${arch}"
-  output_file="${output_dir}/${APP_NAME}"
+if [ "$GENERATE_ONLY" != "generate-only" ]; then
+  # 创建 git tag（若不存在）
+  if ! git rev-parse "v$VERSION" >/dev/null 2>&1; then
+    echo "🏷️ Creating git tag v$VERSION and pushing"
+    git tag "v$VERSION"
+    git push origin "v$VERSION"
+  else
+    echo "✅ Git tag v$VERSION exists"
+  fi
 
-  mkdir -p "$output_dir"
-  echo "🚧 构建: $os/$arch -> $output_file"
-  GOOS=$os GOARCH=$arch go build -o "$output_file" .
-  tar_name="${APP_NAME}-${VERSION}-${os}-${arch}.tar.gz"
-  tar -czf "$tar_name" -C "$BUILD_DIR" "$(basename $output_dir)"
-done
+  echo "🛠️ Building binaries..."
+  for platform in "${PLATFORMS[@]}"; do
+    os=$(echo $platform | awk '{print $1}')
+    arch=$(echo $platform | awk '{print $2}')
+    output_dir="${BUILD_DIR}/${APP_NAME}-${VERSION}-${os}-${arch}"
+    output_file="${output_dir}/${APP_NAME}"
 
-# Homebrew 用 tar.gz
+    mkdir -p "$output_dir"
+    echo "🚧 Building for $os/$arch -> $output_file"
+    GOOS=$os GOARCH=$arch go build -o "$output_file" .
+    tar_name="${APP_NAME}-${VERSION}-${os}-${arch}.tar.gz"
+    tar -czf "$tar_name" -C "$BUILD_DIR" "$(basename $output_dir)"
+  done
+else
+  echo "⚠️ Skipping build and upload steps (generate-only mode)"
+fi
+
 HOMEBREW_TAR="${APP_NAME}-${VERSION}-darwin-amd64.tar.gz"
-echo "🔐 计算 SHA256..."
-SHA256=$(shasum -a 256 "$HOMEBREW_TAR" | awk '{print $1}')
-echo "SHA256: $SHA256"
+if [ ! -f "$HOMEBREW_TAR" ]; then
+  echo "⚠️ Warning: $HOMEBREW_TAR not found, SHA256 will be empty"
+  SHA256=""
+else
+  SHA256=$(shasum -a 256 "$HOMEBREW_TAR" | awk '{print $1}')
+fi
+echo "🔐 SHA256: $SHA256"
 
-# 生成 Formula 文件
+echo "🧾 Generating Homebrew formula $FORMULA_FILE ..."
 cat > "$FORMULA_FILE" <<EOF
 class IconLogo < Formula
   desc "图标生成工具"
@@ -78,21 +89,23 @@ class IconLogo < Formula
 end
 EOF
 
-# 上传 GitHub Release
-echo "🚀 上传 Release 到 GitHub..."
+if [ "$GENERATE_ONLY" == "generate-only" ]; then
+  echo "✅ Formula generated only, exiting."
+  exit 0
+fi
+
+echo "🚀 Uploading release assets to GitHub..."
 if gh release view v${VERSION} > /dev/null 2>&1; then
-  echo "🔁 Release 已存在，覆盖上传构建文件"
+  echo "Release v${VERSION} exists. Uploading assets..."
   for f in ${APP_NAME}-${VERSION}-*.tar.gz; do
     gh release upload v${VERSION} "$f" --clobber
   done
 else
-  echo "🆕 创建 Release 并上传构建文件"
-  gh release create v${VERSION} ${APP_NAME}-${VERSION}-*.tar.gz \
-    -t "v${VERSION}" -n "发布 $APP_NAME v${VERSION}"
+  echo "Creating new release v${VERSION}..."
+  gh release create v${VERSION} ${APP_NAME}-${VERSION}-*.tar.gz -t "v${VERSION}" -n "Release ${APP_NAME} version ${VERSION}"
 fi
 
-# 推送 Formula 到 Tap
-echo "📤 推送 Formula 到 Tap 仓库..."
+echo "📤 Pushing formula to Homebrew Tap..."
 if [ ! -d "$TAP_DIR" ]; then
   git clone "$TAP_REPO" "$TAP_DIR"
 fi
@@ -103,11 +116,8 @@ cp ../$FORMULA_FILE ./
 git add $FORMULA_FILE
 git commit -m "${APP_NAME}: update formula to v${VERSION}" || echo "⚠️ Nothing to commit"
 git push origin "$TAP_BRANCH"
-cd ..
+cd -
 
-echo "✅ 完成发布！"
-echo ""
-echo "🍺 安装命令："
+echo "✅ Done! Install with:"
 echo "  brew tap zk3151463/icon_logo"
-echo "  brew install icon_logo"
-echo ""
+echo "  brew install ${APP_NAME}"

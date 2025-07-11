@@ -22,11 +22,10 @@ jobs:
       id: vars
       run: echo "VERSION=$(echo '${GITHUB_REF##*/}' | sed 's/^v//')" >> $GITHUB_ENV
 
-    - name: Generate formula file
+    - name: Generate formula only
       run: |
         chmod +x ./publish.sh
-        ./publish.sh $VERSION # 你可以在脚本中支持仅生成formula选项，避免重复上传release和推Tap
-
+        ./publish.sh $VERSION generate-only
         mkdir -p core-formula
         mv icon_logo.rb core-formula/
 
