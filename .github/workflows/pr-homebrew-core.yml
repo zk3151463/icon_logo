@@ -36,7 +36,7 @@ jobs:
         git config --global user.email "bot@zk3151463.com"
         git config --global user.name "icon_logo bot"
 
-        git clone https://zk3151463:$GH_PAT@github.com/zk3151463/homebrew-core.git
+        git clone https://x-access-token:$GH_PAT@github.com/zk3151463/homebrew-core.git
         cd homebrew-core
         git remote add upstream https://github.com/Homebrew/homebrew-core.git
         git fetch upstream
