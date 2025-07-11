@@ -26,8 +26,8 @@ jobs:
 
     - name: 📦 Generate formula for homebrew-core
       run: |
-        chmod +x ./publish.sh
-        ./publish.sh $VERSION  # 只生成 formula，不推送 Tap
+        chmod +x ./release.sh
+        ./release.sh $VERSION  # 只生成 formula，不推送 Tap
         mkdir -p core-formula
         mv icon_logo.rb core-formula/
 
