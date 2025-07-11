@@ -51,7 +51,7 @@ func main() {
 		resized := imaging.Resize(img, size, size, imaging.Lanczos)
 		var rounded image.Image
 		if *radius == 0 || *radius == -1 {
-			rounded = resized // 无圆角
+			rounded = whiteToTransparent(resized, size) // 无圆角但白色转透明
 		} else {
 			rounded = roundCornerAndRemoveBg(resized, size, *radius)
 		}
@@ -106,7 +106,24 @@ func parseSize(s string) (int, error) {
 	return size, err
 }
 
-// 圆角+去背景处理
+// 白色转透明
+func whiteToTransparent(src image.Image, size int) image.Image {
+	out := image.NewNRGBA(image.Rect(0, 0, size, size))
+	for y := 0; y < size; y++ {
+		for x := 0; x < size; x++ {
+			c := src.At(x, y)
+			r, g, b, a := c.RGBA()
+			if r>>8 > 240 && g>>8 > 240 && b>>8 > 240 && a > 0 {
+				out.Set(x, y, color.NRGBA{0, 0, 0, 0})
+			} else {
+				out.Set(x, y, c)
+			}
+		}
+	}
+	return out
+}
+
+// 白色转透明+圆角处理
 func roundCornerAndRemoveBg(src image.Image, size int, radius float64) image.Image {
 	out := image.NewNRGBA(image.Rect(0, 0, size, size))
 	center := float64(size) / 2
@@ -114,17 +131,13 @@ func roundCornerAndRemoveBg(src image.Image, size int, radius float64) image.Ima
 		for x := 0; x < size; x++ {
 			dx := float64(x) - center + 0.5
 			dy := float64(y) - center + 0.5
-			if dx*dx+dy*dy <= radius*radius ||
-				(x >= int(center-radius) && x < int(center+radius) && y >= int(center-radius) && y < int(center+radius)) {
-				c := src.At(x, y)
-				r, g, b, a := c.RGBA()
-				if a == 0 || (r>>8 > 240 && g>>8 > 240 && b>>8 > 240) {
-					out.Set(x, y, color.NRGBA{0, 0, 0, 0})
-				} else {
-					out.Set(x, y, c)
-				}
-			} else {
+			c := src.At(x, y)
+			r, g, b, a := c.RGBA()
+			isWhite := (r>>8 > 240 && g>>8 > 240 && b>>8 > 240 && a > 0)
+			if (radius > 0 && dx*dx+dy*dy > radius*radius) || isWhite {
 				out.Set(x, y, color.NRGBA{0, 0, 0, 0})
+			} else {
+				out.Set(x, y, c)
 			}
 		}
 	}
