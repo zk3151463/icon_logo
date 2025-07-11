@@ -10,28 +10,27 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: 🧾 Checkout source
+    - name: Checkout source
       uses: actions/checkout@v3
 
-    - name: 🛠️ Install dependencies
+    - name: Install dependencies
       run: |
         sudo apt update
-        sudo apt install gh hub -y
-        sudo snap install yq  # 用于 YAML 处理（可选）
+        sudo apt install git gh -y
 
-    - name: 🧠 Extract version
+    - name: Extract version
       id: vars
-      run: |
-        echo "VERSION=$(echo '${GITHUB_REF##*/}' | sed 's/^v//')" >> $GITHUB_ENV
+      run: echo "VERSION=$(echo '${GITHUB_REF##*/}' | sed 's/^v//')" >> $GITHUB_ENV
 
-    - name: 📦 Generate formula for homebrew-core
+    - name: Generate formula file
       run: |
-        chmod +x ./release.sh
-        ./release.sh $VERSION  # 只生成 formula，不推送 Tap
+        chmod +x ./publish.sh
+        ./publish.sh $VERSION # 你可以在脚本中支持仅生成formula选项，避免重复上传release和推Tap
+
         mkdir -p core-formula
         mv icon_logo.rb core-formula/
 
-    - name: 🤖 Push PR to homebrew-core
+    - name: PR to homebrew-core
       env:
         GH_PAT: ${{ secrets.GH_PAT }}
       run: |
@@ -52,7 +51,7 @@ jobs:
         gh auth login --with-token <<< "$GH_PAT"
         gh pr create \
           --title "icon_logo: update to v$VERSION" \
-          --body "Created automatically by publish workflow." \
+          --body "自动提交的 PR: 更新 icon_logo 到 v$VERSION" \
           --base master \
           --head zk3151463:icon_logo-v$VERSION \
           --repo Homebrew/homebrew-core
