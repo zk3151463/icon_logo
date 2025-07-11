@@ -1,0 +1,41 @@
+# https://taskfile.dev
+
+version: '3'
+
+vars:
+  GREETING: Hello, World!
+
+tasks:
+  default:
+    cmds:
+      - echo "{{.GREETING}}"
+    silent: true
+
+  build:windows:
+    cmds:
+      - mkdir -p dist
+      - GOOS=windows GOARCH=amd64 go build -o dist/icon_logo.exe main.go
+    silent: false
+    desc: "打包 Windows 可执行文件"
+
+  build:macos:
+    cmds:
+      - mkdir -p dist
+      - GOOS=darwin GOARCH=amd64 go build -o dist/icon_logo_macos main.go
+    silent: false
+    desc: "打包 macOS 可执行文件"
+
+  build:linux:
+    cmds:
+      - mkdir -p dist
+      - GOOS=linux GOARCH=amd64 go build -o dist/icon_logo_linux main.go
+    silent: false
+    desc: "打包 Linux 可执行文件"
+
+  build:all:
+    cmds:
+      - task build:windows
+      - task build:macos
+      - task build:linux
+    desc: "打包所有平台可执行文件"
+
