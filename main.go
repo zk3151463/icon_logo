@@ -19,7 +19,7 @@ func main() {
 	output := flag.String("output", "", "输出目录")
 	sizes := flag.String("sizes", "16,24,32,48,64,128,256,512", "生成的尺寸列表,逗号分隔 (默认 Electron icon 尺寸)")
 	format := flag.String("format", "png", "输出图片格式: png 或 jpg")
-	radius := flag.Float64("radius", 256, "圆角半径，默认尺寸的1/4")
+	radius := flag.Float64("radius", 0, "每个角的圆弧半径（像素），0为无圆角")
 	flag.Parse()
 
 	if *input == "" || *output == "" {
@@ -50,10 +50,10 @@ func main() {
 		}
 		resized := imaging.Resize(img, size, size, imaging.Lanczos)
 		var rounded image.Image
-		if *radius == 0 || *radius == -1 {
-			rounded = edgeWhiteToTransparent(resized, size, size/12) // 仅边缘白色转透明
+		if *radius <= 0 {
+			rounded = resized // 无圆角
 		} else {
-			rounded = roundCornerAndRemoveBg(resized, size, *radius)
+			rounded = roundCorner(resized, size, *radius)
 		}
 		filename := fmt.Sprintf("logo_%dx%d.%s", size, size, *format)
 		outPath := filepath.Join(*output, filename)
@@ -106,56 +106,40 @@ func parseSize(s string) (int, error) {
 	return size, err
 }
 
-// 边缘白色转透明（主体白色不变）
-func edgeWhiteToTransparent(src image.Image, size int, edge int) image.Image {
+// 四角圆弧裁剪
+func roundCorner(src image.Image, size int, radius float64) image.Image {
 	out := image.NewNRGBA(image.Rect(0, 0, size, size))
 	for y := 0; y < size; y++ {
 		for x := 0; x < size; x++ {
-			c := src.At(x, y)
-			r, g, b, a := c.RGBA()
-			isEdge := x < edge || x >= size-edge || y < edge || y >= size-edge
-			if isEdge && r>>8 > 240 && g>>8 > 240 && b>>8 > 240 && a > 0 {
-				out.Set(x, y, color.NRGBA{0, 0, 0, 0})
-			} else {
-				out.Set(x, y, c)
+			inCorner := false
+			// 左上
+			if x < int(radius) && y < int(radius) {
+				dx := float64(x) - radius
+				dy := float64(y) - radius
+				inCorner = dx*dx+dy*dy > radius*radius
 			}
-		}
-	}
-	return out
-}
-
-// 白色转透明
-func whiteToTransparent(src image.Image, size int) image.Image {
-	out := image.NewNRGBA(image.Rect(0, 0, size, size))
-	for y := 0; y < size; y++ {
-		for x := 0; x < size; x++ {
-			c := src.At(x, y)
-			r, g, b, a := c.RGBA()
-			if r>>8 > 240 && g>>8 > 240 && b>>8 > 240 && a > 0 {
-				out.Set(x, y, color.NRGBA{0, 0, 0, 0})
-			} else {
-				out.Set(x, y, c)
+			// 右上
+			if x >= size-int(radius) && y < int(radius) {
+				dx := float64(x) - (float64(size-1) - radius)
+				dy := float64(y) - radius
+				inCorner = dx*dx+dy*dy > radius*radius
 			}
-		}
-	}
-	return out
-}
-
-// 白色转透明+圆角处理
-func roundCornerAndRemoveBg(src image.Image, size int, radius float64) image.Image {
-	out := image.NewNRGBA(image.Rect(0, 0, size, size))
-	center := float64(size) / 2
-	for y := 0; y < size; y++ {
-		for x := 0; x < size; x++ {
-			dx := float64(x) - center + 0.5
-			dy := float64(y) - center + 0.5
-			c := src.At(x, y)
-			r, g, b, a := c.RGBA()
-			isWhite := (r>>8 > 240 && g>>8 > 240 && b>>8 > 240 && a > 0)
-			if (radius > 0 && dx*dx+dy*dy > radius*radius) || isWhite {
+			// 左下
+			if x < int(radius) && y >= size-int(radius) {
+				dx := float64(x) - radius
+				dy := float64(y) - (float64(size-1) - radius)
+				inCorner = dx*dx+dy*dy > radius*radius
+			}
+			// 右下
+			if x >= size-int(radius) && y >= size-int(radius) {
+				dx := float64(x) - (float64(size-1) - radius)
+				dy := float64(y) - (float64(size-1) - radius)
+				inCorner = dx*dx+dy*dy > radius*radius
+			}
+			if inCorner {
 				out.Set(x, y, color.NRGBA{0, 0, 0, 0})
 			} else {
-				out.Set(x, y, c)
+				out.Set(x, y, src.At(x, y))
 			}
 		}
 	}
